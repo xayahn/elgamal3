@@ -23,7 +23,7 @@ export default function StudentPortal() {
   // Automatically fetch the Public Key on load
   const fetchPublicKey = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/public-key');
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/public-key`);
       const data = await response.json();
       if (data.publicKey) {
         setAdminPublicKey(data.publicKey);
