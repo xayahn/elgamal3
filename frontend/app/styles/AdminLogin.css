@@ -1,0 +1,103 @@
+.login-overlay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 450px;
+  background-color: #ffffff;
+  border: 1px solid rgba(228, 228, 231, 0.8); /* zinc-200 */
+  border-radius: 1rem; /* 2xl */
+  padding: 3rem;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* shadow-sm */
+  transition: box-shadow 0.3s ease;
+}
+
+.login-overlay:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* shadow-md */
+}
+
+.login-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #27272a; /* zinc-800 */
+  margin-bottom: 0.25rem;
+  letter-spacing: -0.025em;
+}
+
+.login-subtitle {
+  font-size: 0.875rem;
+  color: #71717a; /* zinc-500 */
+  margin-bottom: 2rem;
+  text-align: center;
+  font-weight: 500;
+}
+
+.login-form {
+  width: 100%;
+  max-width: 340px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.input-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #3f3f46; /* zinc-700 */
+}
+
+.login-input {
+  padding: 0.75rem 1rem;
+  border: 1px solid #d4d4d8; /* zinc-300 */
+  border-radius: 0.75rem; /* xl */
+  font-size: 1rem;
+  background-color: #fafafa; /* zinc-50 */
+  transition: all 0.2s ease;
+}
+
+.login-input:focus {
+  outline: none;
+  background-color: #ffffff;
+  border-color: #6366f1; /* indigo-500 */
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+.login-button {
+  background-color: #18181b; /* zinc-900 */
+  color: #ffffff;
+  padding: 0.875rem;
+  border: none;
+  border-radius: 0.75rem; /* xl */
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+  margin-top: 0.5rem;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.login-button:hover {
+  background-color: #27272a; /* zinc-800 */
+}
+
+.login-button:active {
+  transform: scale(0.98);
+}
+
+.error-message {
+  color: #991b1b;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-align: center;
+  background-color: #fef2f2;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid #fecaca;
+}
