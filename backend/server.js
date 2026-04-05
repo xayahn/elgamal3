@@ -3,8 +3,36 @@ const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
-app.use(cors());
+
+// ✅ SECURITY: Restrict CORS to frontend only
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  credentials: true
+}));
+
 app.use(express.json());
+
+// ✅ SECURITY: Simple rate limiting for login attempts
+const loginAttempts = new Map();
+const rateLimit = (req, res, next) => {
+  const ip = req.ip;
+  const attempts = loginAttempts.get(ip) || 0;
+  if (attempts > 5) {
+    return res.status(429).json({ error: 'Too many login attempts. Try again later.' });
+  }
+  next();
+};
+
+// ✅ SECURITY: Admin token verification
+const adminToken = process.env.ADMIN_TOKEN || 'secure-token-change-in-production';
+const verifyAdmin = (req, res, next) => {
+  const token = req.headers['authorization']?.split(' ')[1];
+  if (token === adminToken) {
+    next();
+  } else {
+    res.status(401).json({ error: 'Unauthorized' });
+  }
+};
 
 // In-memory database
 let storedFeedbacks = [];
@@ -15,7 +43,7 @@ app.get('/api/public-key', (req, res) => {
   res.status(200).json({ publicKey: activePublicKey });
 });
 
-app.post('/api/public-key', (req, res) => {
+app.post('/api/public-key', verifyAdmin, (req, res) => {
   const { publicKey } = req.body;
   if (!publicKey) return res.status(400).json({ error: 'Missing public key' });
   activePublicKey = publicKey;
@@ -42,29 +70,43 @@ app.post('/api/feedback', (req, res) => {
   res.status(201).json({ message: 'Encrypted feedback stored.', feedback: newFeedback });
 });
 
-app.get('/api/feedback', (req, res) => {
+app.get('/api/feedback', verifyAdmin, (req, res) => {
   res.status(200).json(storedFeedbacks);
 });
 
 // --- DECRYPTION HISTORY ENDPOINT ---
-app.post('/api/feedback/:id/decrypt-history', (req, res) => {
+app.post('/api/feedback/:id/decrypt-history', verifyAdmin, (req, res) => {
   const { privateKey } = req.body;
   const feedback = storedFeedbacks.find(f => f.id === parseInt(req.params.id));
   
   if (!feedback) return res.status(404).json({ error: 'Feedback not found' });
   
-  feedback.privateKeyUsed = privateKey;
+  // ✅ SECURITY: Don't store plaintext private key - just mark as decrypted
   feedback.decryptedAt = new Date().toLocaleTimeString();
+  feedback.wasDecrypted = true;
   
   res.status(200).json({ message: 'Decryption history recorded', feedback });
 });
 
 // --- ADMIN LOGIN ENDPOINT ---
-app.post('/api/login', (req, res) => {
+app.post('/api/login', rateLimit, (req, res) => {
+  const ip = req.ip;
   const { username, password } = req.body;
-  if (username === process.env.ADMIN_USERNAME && password === process.env.ADMIN_PASSWORD) {
-    return res.status(200).json({ success: true });
+  
+  // ✅ SECURITY: Validate inputs
+  if (!username || !password || typeof username !== 'string' || typeof password !== 'string') {
+    return res.status(400).json({ error: 'Invalid input' });
   }
+  
+  if (username === process.env.ADMIN_USERNAME && password === process.env.ADMIN_PASSWORD) {
+    loginAttempts.delete(ip); // Reset on success
+    return res.status(200).json({ success: true, token: adminToken });
+  }
+  
+  // Track failed attempts
+  loginAttempts.set(ip, (loginAttempts.get(ip) || 0) + 1);
+  setTimeout(() => loginAttempts.delete(ip), 15 * 60 * 1000); // 15 min reset
+  
   return res.status(401).json({ success: false, error: 'Invalid credentials' });
 });
 

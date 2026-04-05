@@ -31,6 +31,7 @@ const modInverse = (a, m) => {
 export default function AdminPortal() {
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false);
+  const [adminToken, setAdminToken] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
@@ -52,14 +53,20 @@ export default function AdminPortal() {
   // Check localStorage after hydration
   useEffect(() => {
     const storedLoginState = localStorage.getItem('adminLoggedIn') === 'true';
-    setIsAdminLoggedIn(storedLoginState);
+    const storedToken = localStorage.getItem('adminToken');
+    if (storedLoginState && storedToken) {
+      setIsAdminLoggedIn(true);
+      setAdminToken(storedToken);
+    }
     setIsHydrated(true);
   }, []);
 
   const fetchData = async () => {
     try {
       const [fbRes, pkRes] = await Promise.all([
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/feedback`),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/feedback`, {
+          headers: { 'Authorization': `Bearer ${adminToken}` }
+        }),
         fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/public-key`)
       ]);
       setStoredFeedbacks(await fbRes.json());
@@ -95,7 +102,10 @@ export default function AdminPortal() {
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/public-key`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${adminToken}`
+        },
         body: JSON.stringify({ publicKey: y.toString() })
       });
 
@@ -147,7 +157,10 @@ export default function AdminPortal() {
       try {
         await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/feedback/${feedbackId}/decrypt-history`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${adminToken}`
+          },
           body: JSON.stringify({ privateKey: decryptKey })
         });
       } catch (e) {
@@ -179,9 +192,11 @@ export default function AdminPortal() {
         body: JSON.stringify({ username: username.trim(), password })
       });
       const data = await response.json();
-      if (data.success) {
+      if (data.success && data.token) {
         setIsAdminLoggedIn(true);
+        setAdminToken(data.token);
         localStorage.setItem('adminLoggedIn', 'true');
+        localStorage.setItem('adminToken', data.token);
         setUsername('');
         setPassword('');
         addToast('Login successful', 'success');
@@ -339,7 +354,9 @@ export default function AdminPortal() {
             <button 
               onClick={() => {
                 setIsAdminLoggedIn(false);
+                setAdminToken('');
                 localStorage.removeItem('adminLoggedIn');
+                localStorage.removeItem('adminToken');
               }} 
               className="px-6 py-2 bg-red-500 text-white font-black rounded-lg hover:bg-red-600 transition-all shadow-md hover:shadow-lg"
             >
