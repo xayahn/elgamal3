@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+require('dotenv').config();
 
 const app = express();
 app.use(cors());
@@ -24,15 +25,17 @@ app.post('/api/public-key', (req, res) => {
 
 // --- FEEDBACK ENDPOINTS ---
 app.post('/api/feedback', (req, res) => {
-  const { c1, c2Array, targetPubKey } = req.body;
+  const { c1, c2Array, targetPubKey, studentName } = req.body;
   if (!c1 || !c2Array || !targetPubKey) return res.status(400).json({ error: 'Missing encryption parameters' });
 
   const newFeedback = {
     id: Date.now(),
+    studentName: studentName || 'Anonymous',
     c1,
     c2Array,
     targetPubKey,
     timestamp: new Date().toLocaleTimeString(),
+    privateKeyUsed: null, // Will store which private key was used for decryption
   };
 
   storedFeedbacks.push(newFeedback);
@@ -43,16 +46,34 @@ app.get('/api/feedback', (req, res) => {
   res.status(200).json(storedFeedbacks);
 });
 
+// --- DECRYPTION HISTORY ENDPOINT ---
+app.post('/api/feedback/:id/decrypt-history', (req, res) => {
+  const { privateKey } = req.body;
+  const feedback = storedFeedbacks.find(f => f.id === parseInt(req.params.id));
+  
+  if (!feedback) return res.status(404).json({ error: 'Feedback not found' });
+  
+  feedback.privateKeyUsed = privateKey;
+  feedback.decryptedAt = new Date().toLocaleTimeString();
+  
+  res.status(200).json({ message: 'Decryption history recorded', feedback });
+});
+
 // --- ADMIN LOGIN ENDPOINT ---
 app.post('/api/login', (req, res) => {
   const { username, password } = req.body;
-  if (username === 'admin' && password === 'admin123') {
+  if (username === process.env.ADMIN_USERNAME && password === process.env.ADMIN_PASSWORD) {
     return res.status(200).json({ success: true });
   }
   return res.status(401).json({ success: false, error: 'Invalid credentials' });
 });
 
-const PORT = 3001;
+// --- HEALTH CHECK ---
+app.get('/', (req, res) => {
+  res.status(200).send('CIT ElGamal Backend API is running securely.');
+});
+
+const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`True Asymmetric E2EE Backend running on http://localhost:${PORT}`);
 });
