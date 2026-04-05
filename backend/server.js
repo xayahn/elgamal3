@@ -4,9 +4,17 @@ require('dotenv').config();
 
 const app = express();
 
-// ✅ SECURITY: Restrict CORS to frontend only
+// ✅ SECURITY: Restrict CORS to frontend only (handle trailing slash)
+const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:3000').replace(/\/$/, '');
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: (origin, callback) => {
+    const normalizedOrigin = origin ? origin.replace(/\/$/, '') : '';
+    if (normalizedOrigin === frontendUrl || !origin) {
+      callback(null, true);
+    } else {
+      callback(new Error('CORS not allowed'));
+    }
+  },
   credentials: true
 }));
 
