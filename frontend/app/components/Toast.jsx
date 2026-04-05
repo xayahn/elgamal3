@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 
-export function Toast({ message, type = 'success', duration = 3000, onClose }) {
+export function Toast({ message, type = 'success', duration = 1500, onClose }) {
   const [isVisible, setIsVisible] = useState(true);
 
   useEffect(() => {
@@ -49,7 +49,7 @@ export function Toast({ message, type = 'success', duration = 3000, onClose }) {
 export function useToast() {
   const [toasts, setToasts] = useState([]);
 
-  const addToast = (message, type = 'success', duration = 3000) => {
+  const addToast = (message, type = 'success', duration = 1500) => {
     const id = Date.now();
     setToasts(prev => [...prev, { id, message, type, duration }]);
     return id;
