@@ -48,6 +48,10 @@ export default function AdminPortal() {
   const [decryptKey, setDecryptKey] = useState(''); 
   const [decryptedResults, setDecryptedResults] = useState({});
   const [expandedFeedback, setExpandedFeedback] = useState(null);
+  
+  // Delete States
+  const [deleteModal, setDeleteModal] = useState({ isOpen: false, feedbackId: null, deleteKey: '' });
+  
   const { toasts, addToast, removeToast } = useToast();
 
   // Check localStorage after hydration
@@ -171,6 +175,37 @@ export default function AdminPortal() {
     } catch (e) {
       addToast('Incorrect private key - decryption failed', 'error');
       setDecryptedResults({ ...decryptedResults, [feedbackId]: "Decryption failed - invalid key" });
+    }
+  };
+
+  const handleDeleteMessage = async (feedbackId) => {
+    if (!deleteModal.deleteKey || isNaN(deleteModal.deleteKey)) {
+      addToast('Enter a valid private key for deletion', 'warning');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/feedback/${feedbackId}`, {
+        method: 'DELETE',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${adminToken}`
+        },
+        body: JSON.stringify({ privateKey: deleteModal.deleteKey })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Remove from local state
+        setStoredFeedbacks(storedFeedbacks.filter(f => f.id !== feedbackId));
+        setDeleteModal({ isOpen: false, feedbackId: null, deleteKey: '' });
+        addToast('Message deleted successfully', 'success');
+      } else {
+        addToast(data.error || 'Failed to delete message', 'error');
+      }
+    } catch (e) {
+      addToast('Network error while deleting', 'error');
     }
   };
 
@@ -500,6 +535,13 @@ export default function AdminPortal() {
                           <p className="text-xs font-mono text-gray-600 truncate font-bold">c1: {fb.c1.substring(0, 30)}...</p>
                           <p className="text-xs font-mono text-gray-600 truncate font-bold">c2: [{fb.c2Array[0]}, {fb.c2Array[1]}, ...]</p>
                         </div>
+
+                        <button 
+                          onClick={() => setDeleteModal({ isOpen: true, feedbackId: fb.id, deleteKey: '' })}
+                          className="w-full py-2 bg-red-500 hover:bg-red-600 text-white font-black rounded-lg text-sm transition-all"
+                        >
+                          DELETE MESSAGE
+                        </button>
                       </div>
                     )}
                   </div>
@@ -508,6 +550,41 @@ export default function AdminPortal() {
             </div>
           </section>
         </div>
+
+        {/* Delete Confirmation Modal */}
+        {deleteModal.isOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl border-2 border-red-300 p-6 max-w-sm w-full shadow-lg">
+              <h2 className="text-xl font-black text-red-700 mb-3">DELETE MESSAGE</h2>
+              <p className="text-sm text-gray-700 mb-4 font-semibold">
+                To delete this message permanently, enter the admin private key for verification:
+              </p>
+              
+              <input
+                type="password"
+                placeholder="Enter private key"
+                value={deleteModal.deleteKey}
+                onChange={(e) => setDeleteModal({ ...deleteModal, deleteKey: e.target.value })}
+                className="w-full px-4 py-2 border-2 border-red-200 rounded-lg focus:outline-none focus:border-red-400 mb-4"
+              />
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setDeleteModal({ isOpen: false, feedbackId: null, deleteKey: '' })}
+                  className="flex-1 py-2 bg-gray-300 hover:bg-gray-400 text-gray-900 font-black rounded-lg transition-all"
+                >
+                  CANCEL
+                </button>
+                <button
+                  onClick={() => handleDeleteMessage(deleteModal.feedbackId)}
+                  className="flex-1 py-2 bg-red-500 hover:bg-red-600 text-white font-black rounded-lg transition-all"
+                >
+                  DELETE
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Footer */}
         <footer className="bg-gray-100 border-t-2 border-blue-200 py-4 px-4 rounded-lg">

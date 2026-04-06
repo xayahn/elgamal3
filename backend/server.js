@@ -96,6 +96,92 @@ app.post('/api/feedback/:id/decrypt-history', verifyAdmin, (req, res) => {
   res.status(200).json({ message: 'Decryption history recorded', feedback });
 });
 
+// --- DELETE MESSAGE ENDPOINT (Requires Private Key for Security) ---
+app.delete('/api/feedback/:id', verifyAdmin, (req, res) => {
+  const { privateKey } = req.body;
+  const feedbackId = parseInt(req.params.id);
+  
+  if (!privateKey || isNaN(privateKey)) {
+    return res.status(400).json({ error: 'Private key required for deletion' });
+  }
+  
+  const feedbackIndex = storedFeedbacks.findIndex(f => f.id === feedbackId);
+  
+  if (feedbackIndex === -1) {
+    return res.status(404).json({ error: 'Feedback not found' });
+  }
+  
+  const feedback = storedFeedbacks[feedbackIndex];
+  
+  // ✅ SECURITY: Verify private key can decrypt the message
+  // This ensures only someone with the correct key can delete
+  try {
+    const p = 2147483647n;
+    const g = 16807n;
+    
+    const modExp = (base, exp, mod) => {
+      let res = 1n;
+      base = BigInt(base) % BigInt(mod);
+      exp = BigInt(exp);
+      while (exp > 0n) {
+        if (exp % 2n === 1n) res = (res * base) % mod;
+        exp = exp / 2n;
+        base = (base * base) % mod;
+      }
+      return res;
+    };
+    
+    const modInverse = (a, m) => {
+      let m0 = BigInt(m), y = 0n, x = 1n;
+      if (m === 1n) return 0n;
+      let q, t;
+      a = BigInt(a);
+      while (a > 1n) {
+        q = a / m0;
+        t = m0;
+        m0 = a % m0;
+        a = t;
+        t = y;
+        y = x - q * y;
+        x = t;
+      }
+      if (x < 0n) x += BigInt(m);
+      return x;
+    };
+    
+    // Try to decrypt with provided private key
+    const x = BigInt(privateKey);
+    const c1 = BigInt(feedback.c1);
+    const s = modExp(c1, x, p);
+    const sInv = modInverse(s, p);
+    
+    const decryptedChars = feedback.c2Array.map(c2Str => {
+      const c2 = BigInt(c2Str);
+      const m = (c2 * sInv) % p;
+      const num = Number(m);
+      return (num >= 32 && num <= 126) ? String.fromCharCode(num) : '';
+    });
+    
+    const decryptedMessage = decryptedChars.join('');
+    
+    // If we can decrypt (get valid characters), the private key is correct
+    if (!decryptedMessage || decryptedMessage.trim().length === 0) {
+      return res.status(401).json({ error: 'Incorrect private key - cannot verify deletion' });
+    }
+    
+    // Private key is correct, proceed with deletion
+    storedFeedbacks.splice(feedbackIndex, 1);
+    
+    res.status(200).json({ 
+      message: 'Feedback deleted successfully', 
+      deletedId: feedbackId 
+    });
+    
+  } catch (e) {
+    return res.status(401).json({ error: 'Incorrect private key - deletion rejected' });
+  }
+});
+
 // --- ADMIN LOGIN ENDPOINT ---
 app.post('/api/login', rateLimit, (req, res) => {
   const ip = req.ip;
