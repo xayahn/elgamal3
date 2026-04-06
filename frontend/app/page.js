@@ -73,6 +73,9 @@ export default function StudentPortal() {
     setIsLoading(true);
 
     try {
+      // Capture submission timestamp on client (real time)
+      const submissionTimestamp = new Date().toLocaleString();
+      
       // ElGamal Encryption
       const k = BigInt(Math.floor(Math.random() * 1000000) + 2); 
       const y = BigInt(adminPublicKey);
@@ -86,7 +89,8 @@ export default function StudentPortal() {
         studentName: studentName.trim(),
         c1: c1.toString(),
         c2Array: c2Array.map(c => c.toString()),
-        targetPubKey: adminPublicKey
+        targetPubKey: adminPublicKey,
+        submissionTimestamp: submissionTimestamp
       };
 
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/feedback`, {

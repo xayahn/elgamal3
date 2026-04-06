@@ -61,7 +61,7 @@ app.post('/api/public-key', verifyAdmin, (req, res) => {
 
 // --- FEEDBACK ENDPOINTS ---
 app.post('/api/feedback', (req, res) => {
-  const { c1, c2Array, targetPubKey, studentName } = req.body;
+  const { c1, c2Array, targetPubKey, studentName, submissionTimestamp } = req.body;
   if (!c1 || !c2Array || !targetPubKey) return res.status(400).json({ error: 'Missing encryption parameters' });
 
   const newFeedback = {
@@ -70,7 +70,7 @@ app.post('/api/feedback', (req, res) => {
     c1,
     c2Array,
     targetPubKey,
-    timestamp: new Date().toLocaleTimeString(),
+    timestamp: submissionTimestamp || new Date().toLocaleString(),
     privateKeyUsed: null, // Will store which private key was used for decryption
   };
 
